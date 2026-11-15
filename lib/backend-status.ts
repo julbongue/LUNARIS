@@ -50,14 +50,59 @@ export async function fetchBackendStatus(): Promise<BackendStatus> {
   try {
     health = await apiRequest<unknown>("/api/v1/health", { timeoutMs: 8000 });
   } catch (e) {
-    const msg = e instanceof ApiClientError ? e.message : "Falha ao contactar /api/v1/health.";
+    if (e instanceof ApiClientError) {
+      if (e.kind === "timeout") {
+        return {
+          api: "offline",
+          scientificEngine: "unavailable",
+          ephemerisProvider: "unavailable",
+          dem: "unavailable",
+          message: "API inacessível (tempo limite excedido).",
+          details: [e.message, e.status ? `HTTP ${e.status}` : "Tipo: timeout"],
+          checkedAt,
+        };
+      }
+      if (e.kind === "network") {
+        return {
+          api: "offline",
+          scientificEngine: "unavailable",
+          ephemerisProvider: "unavailable",
+          dem: "unavailable",
+          message: "API inacessível (falha de rede/CORS/tunnel).",
+          details: [e.message, "Tipo: erro de rede"],
+          checkedAt,
+        };
+      }
+      if (e.kind === "invalid_response") {
+        return {
+          api: "degraded",
+          scientificEngine: "unknown",
+          ephemerisProvider: "unknown",
+          dem: "unknown",
+          message: "API respondeu, mas a resposta do health check é inválida.",
+          details: [e.message, "Tipo: erro de parsing/resposta inválida (não é falha de rede)"],
+          checkedAt,
+        };
+      }
+      // HTTP errors: o servidor respondeu -> não é "offline/rede"
+      const httpInfo = e.status ? `HTTP ${e.status}` : "erro HTTP";
+      return {
+        api: "degraded",
+        scientificEngine: "unknown",
+        ephemerisProvider: "unknown",
+        dem: "unknown",
+        message: `API respondeu com erro (${httpInfo}).`,
+        details: [e.message, `Tipo: erro HTTP${e.status ? ` (${e.status})` : ""}`],
+        checkedAt,
+      };
+    }
     return {
       api: "offline",
       scientificEngine: "unavailable",
       ephemerisProvider: "unavailable",
       dem: "unavailable",
       message: "API indisponível ou inacessível.",
-      details: [msg],
+      details: ["Falha ao contactar /api/v1/health."],
       checkedAt,
     };
   }
@@ -65,14 +110,17 @@ export async function fetchBackendStatus(): Promise<BackendStatus> {
   try {
     capabilities = await apiRequest<unknown>("/api/v1/capabilities", { timeoutMs: 8000 });
   } catch (e) {
-    // API responde health mas capabilities falhou: estado degradado/desconhecido
+    // API responde health mas capabilities falhou
     const msg = e instanceof ApiClientError ? e.message : "Falha ao obter /api/v1/capabilities.";
+    const kindInfo = e instanceof ApiClientError
+      ? (e.kind === "timeout" ? " (timeout)" : e.kind === "network" ? " (falha de rede)" : e.kind === "invalid_response" ? " (resposta inválida)" : e.status ? ` (HTTP ${e.status})` : "")
+      : "";
     return {
       api: "degraded",
       scientificEngine: "unknown",
       ephemerisProvider: "unknown",
       dem: "unknown",
-      message: "API acessível, mas capacidades/motores não puderam ser verificadas.",
+      message: `API acessível, mas capacidades/motores não puderam ser verificadas${kindInfo}.`,
       details: [msg],
       checkedAt,
       raw: { health },

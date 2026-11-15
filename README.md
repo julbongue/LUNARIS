@@ -23,9 +23,12 @@ Frontend **Next.js** do LUNARIS para exploração e análise lunar (globo 3D, se
    ```bash
    cp .env.example .env.local
    ```
-   Editar `.env.local`:
+   Editar `.env.local` (exemplos):
    ```env
+   # Local
    NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+   # ou via Cloudflare Tunnel
+   # NEXT_PUBLIC_API_URL=https://vary-vienna-rooms-prefers.trycloudflare.com
    ```
 3. Iniciar em desenvolvimento:
    ```bash
@@ -65,12 +68,12 @@ Notas:
 1. No projeto na Vercel: **Settings → Environment Variables**.
 2. Adicionar:
    - **Name**: `NEXT_PUBLIC_API_URL`
-   - **Value**: URL pública do backend/tunnel (HTTPS), ex.: `https://nome-do-tunel.trycloudflare.com`
-   - **Environments**: Production (e Preview se aplicável).
+   - **Value**: `https://vary-vienna-rooms-prefers.trycloudflare.com` (URL pública atual do Cloudflare Tunnel; atualizar se o tunnel mudar)
+   - **Environments**: **Production** (e **Preview** se aplicável; **Development** se usar Vercel dev)
 3. Fazer **Redeploy** para aplicar a variável.
 4. Validar no frontend (Lunar Explorer) o indicador de **Estado do backend**.
 
-> A alteração de variáveis `NEXT_PUBLIC_*` requer novo build/deploy.
+> A alteração de variáveis `NEXT_PUBLIC_*` requer novo build/deploy. **Nota:** não é possível confirmar alteração no painel Vercel sem acesso à conta; a configuração acima deve ser aplicada manualmente.
 
 ## Endpoints reais utilizados
 
