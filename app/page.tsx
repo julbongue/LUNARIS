@@ -7,7 +7,9 @@ import { Globe } from "@/components/explorer/Globe";
 import { LocationPanel } from "@/components/explorer/LocationPanel";
 import { ComparisonPanel } from "@/components/explorer/ComparisonPanel";
 import { Timeline } from "@/components/explorer/Timeline";
-import { analyzeLocations, getBackendMode } from "@/services/api";
+import { BackendStatusBadge } from "@/components/explorer/BackendStatusBadge";
+import { analyzeLocations, isApiConfigured } from "@/services/api";
+import { getApiConfig } from "@/lib/api-config";
 import type { EphemerisResponse } from "@/lib/models";
 
 type SectionId = "overview" | "explorer" | "comparison" | "history" | "data";
@@ -43,7 +45,8 @@ function ExplorerShell() {
   const [step, setStep] = useState(6);
   const [history, setHistory] = useState<{ at: string; sites: string[]; start: string; end: string; step: number; mode: string }[]>([]);
 
-  const backendMode = useMemo(() => getBackendMode(), []);
+  const apiConfigured = useMemo(() => isApiConfigured(), []);
+  const apiBase = useMemo(() => getApiConfig().baseUrl, []);
 
   const runAnalysis = async (s: string, e: string, st: number) => {
     if (sites.length === 0) return;
@@ -58,7 +61,7 @@ function ExplorerShell() {
         stepHours: st,
       });
       setAnalysis(res);
-      setHistory((h) => [{ at: new Date().toISOString(), sites: sites.map((x) => x.name), start: s, end: e, step: st, mode: backendMode }, ...h].slice(0, 20));
+      setHistory((h) => [{ at: new Date().toISOString(), sites: sites.map((x) => x.name), start: s, end: e, step: st, mode: apiConfigured ? "live" : "unconfigured" }, ...h].slice(0, 20));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Falha ao executar análise.");
     } finally {
@@ -87,8 +90,8 @@ function ExplorerShell() {
           ))}
         </nav>
         <div className="border-t border-[#1e2a37] p-3 text-[10px] text-[#6b7a8a]">
-          <div>Modo dados: <span className={backendMode === "live" ? "text-[#8FAFC7]" : "text-[#E89A55]"}>{backendMode}</span></div>
-          <div>Base: {backendMode === "live" ? "API configurada" : "mock/sintético local"}</div>
+          <div>API: <span className={apiConfigured ? "text-[#8FAFC7]" : "text-[#E89A55]"}>{apiConfigured ? "configurada" : "não configurada"}</span></div>
+          <div className="break-all">Base: {apiBase || "defina NEXT_PUBLIC_API_URL"}</div>
         </div>
       </aside>
 
@@ -101,7 +104,7 @@ function ExplorerShell() {
             </div>
             <div className="flex items-center gap-2 text-xs text-[#8FAFC7]">
               <span className="rounded-full border border-[#2a3a4a] bg-[#0d1824] px-2.5 py-1">Locais: {sites.length}/3</span>
-              <span className={`rounded-full border px-2.5 py-1 ${backendMode === "live" ? "border-[#2a3a4a] bg-[#0d1824] text-[#8FAFC7]" : "border-[#4a3522] bg-[#1d140c] text-[#E89A55]"}`}>{backendMode === "live" ? "Dados: API" : "Dados: mock/offline"}</span>
+              <span className={`rounded-full border px-2.5 py-1 ${apiConfigured ? "border-[#2a3a4a] bg-[#0d1824] text-[#8FAFC7]" : "border-[#4a3522] bg-[#1d140c] text-[#E89A55]"}`}>{apiConfigured ? "Dados: backend/API" : "API não configurada"}</span>
             </div>
           </div>
           <div className="mt-3 flex gap-1 overflow-x-auto lg:hidden">
@@ -122,6 +125,7 @@ function ExplorerShell() {
                   <Globe />
                 </div>
                 <div className="flex min-w-0 flex-col gap-4">
+                  <BackendStatusBadge />
                   <LocationPanel />
                   <ComparisonPanel analysis={analysis} sites={sites} />
                 </div>
@@ -135,9 +139,9 @@ function ExplorerShell() {
           {active === "overview" && (
             <section className="grid gap-4 md:grid-cols-2">
               <InfoCard title="Objetivo" text="Ferramenta de exploração e análise lunar para comparar condições científicas de até três locais, com base em dados fornecidos pela API LUNARIS quando disponíveis." />
-              <InfoCard title="Estado da integração" text={`Modo atual: ${backendMode}. Em modo offline, séries temporais são sintéticas (mock) para validação da interface; não devem ser interpretadas como medições científicas.`} />
+              <InfoCard title="Estado da integração" text={`API configurada: ${apiConfigured ? `sim (${apiBase})` : "não"}. O frontend comunica com o backend FastAPI via NEXT_PUBLIC_API_URL (ex.: Cloudflare Tunnel). Sem backend acessível, as análises retornam estado indisponível sem fabricar resultados.`} />
               <InfoCard title="Experiência principal" text="Use o Lunar Explorer para interagir com o globo 3D, selecionar locais, definir intervalo/passo temporal e comparar resultados lado a lado." />
-              <InfoCard title="Limitações atuais" text="Sem contrato backend (docs/frontend/contract.md) no repositório: integração live tenta endpoint genérico e degrada para 'Indisponível' quando necessário. Nenhum valor científico é inventado." />
+              <InfoCard title="Disponibilidade" text="O estado do backend/motores é verificado via /api/v1/health e /api/v1/capabilities (API, motor científico, efemérides, DEM/topografia) e apresentado na interface." />
             </section>
           )}
 
@@ -173,7 +177,7 @@ function ExplorerShell() {
             <section className="grid gap-4 md:grid-cols-2">
               <InfoCard title="Fontes visuais" text="Globo 3D utiliza texturas lunares públicas de three.js (derivadas de NASA/USGS LRO) para visualização. A textura é ilustrativa e distinta dos dados científicos calculados pelo backend." />
               <InfoCard title="Modelos e proveniência" text="Cada resultado deve indicar fonte (real/mock/sintético/indisponível), qualidade e proveniência quando fornecidos pela API. O frontend não calcula métricas científicas." />
-              <InfoCard title="Contrato/API" text="docs/frontend/contract.md não encontrado neste repositório. A integração live é defensiva: chamadas independentes por local, agregação no frontend e degradação para 'Não disponível' em falhas." />
+              <InfoCard title="Contrato/API" text="Integração baseada nos endpoints reais do backend (/api/v1/analysis, /api/v1/health, /api/v1/capabilities, /api/v1/sites). Chamadas independentes por local, agregação no frontend e degradação para 'Não disponível' em falhas ou indisponibilidade." />
               <InfoCard title="Catálogo de referência" text="Inclui locais de referência (ex.: Shackleton, Mare Tranquillitatis, Tycho) para navegação rápida; coordenadas são indicativas e podem ser editadas pelo utilizador." />
             </section>
           )}

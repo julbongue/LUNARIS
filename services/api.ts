@@ -1,6 +1,5 @@
 import type {
   AnalysisRequest,
-  ApiBackend,
   DataQualityInfo,
   DataSource,
   EphemerisPoint,
@@ -9,35 +8,27 @@ import type {
   LocationInput,
 } from "@/lib/models";
 import { CATALOG_LOCATIONS, pickColor } from "@/lib/data-catalog";
-import { generateForLocation } from "./mock";
+import { getApiConfig } from "@/lib/api-config";
+import { apiRequest, toUserErrorMessage } from "@/lib/api-client";
 
-export function getBackendMode(): ApiBackend {
-  if (typeof window !== "undefined") {
-    const stored = window.localStorage.getItem("lunaris:apiBackend");
-    if (stored === "live" || stored === "offline") return stored;
-  }
-  const env = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_BACKEND : undefined;
-  return env === "live" ? "live" : "offline";
-}
-
-export function getApiBaseUrl(): string {
-  const env = typeof process !== "undefined" ? process.env.NEXT_PUBLIC_API_BASE_URL : undefined;
-  return (env || "http://127.0.0.1:8000").replace(/\/$/g, "");
+export function isApiConfigured(): boolean {
+  return getApiConfig().configured;
 }
 
 export async function listLocations(): Promise<Location[]> {
-  const backend = getBackendMode();
-  if (backend === "live") {
-    try {
-      const data = await fetchJson<unknown>(`${getApiBaseUrl()}/api/v1/sites`);
-      const d = asObj(data);
-      const sites = Array.isArray(d.sites) ? d.sites : [];
-      if (sites.length) {
-        return sites.map((s, i) => mapBackendSite(s, i));
-      }
-    } catch {
-      // fallback para catálogo local
+  if (!isApiConfigured()) {
+    // Sem backend configurado: expor catálogo local como referência de navegação (não resultados científicos).
+    return CATALOG_LOCATIONS.map((l) => ({ ...l }));
+  }
+  try {
+    const data = await apiRequest<unknown>("/api/v1/sites", { timeoutMs: 15000 });
+    const d = asObj(data);
+    const sites = Array.isArray(d.sites) ? d.sites : [];
+    if (sites.length) {
+      return sites.map((s, i) => mapBackendSite(s, i));
     }
+  } catch {
+    // fallback para catálogo local de referência
   }
   return CATALOG_LOCATIONS.map((l) => ({ ...l }));
 }
@@ -77,59 +68,32 @@ export async function createLocalLocation(input: LocationInput): Promise<Locatio
   };
 }
 
-async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const controller = new AbortController();
-  const id = setTimeout(() => controller.abort(), 30000);
-  try {
-    const res = await fetch(url, { ...init, signal: controller.signal });
-    if (!res.ok) {
-      let detail = `HTTP ${res.status}`;
-      try {
-        const body = await res.json();
-        if (body?.detail) {
-          detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail);
-        } else if (body?.message) {
-          detail = String(body.message);
-        }
-      } catch {
-        const text = await res.text().catch(() => "");
-        if (text) detail = text;
-      }
-      throw new Error(detail);
-    }
-    return (await res.json()) as T;
-  } finally {
-    clearTimeout(id);
-  }
-}
-
 export async function analyzeLocations(
   locations: Location[],
   req: AnalysisRequest,
 ): Promise<EphemerisResponse[]> {
   if (locations.length === 0) return [];
-  const backend = getBackendMode();
 
-  if (backend === "live") {
-    const base = getApiBaseUrl();
-    return Promise.all(
-      locations.map(async (loc) => {
-        try {
-          const payload = buildAnalysisRequest(loc, req);
-          const data = await fetchJson<unknown>(`${base}/api/v1/analysis`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          return normalizeAnalysisResult(loc, data);
-        } catch (e) {
-          return unavailable(loc, e instanceof Error ? e.message : "Falha ao obter dados do backend.");
-        }
-      }),
-    );
+  if (!isApiConfigured()) {
+    const reason = "API não configurada (NEXT_PUBLIC_API_URL). Configure a URL do backend/tunnel.";
+    return locations.map((loc) => unavailable(loc, reason));
   }
 
-  return Promise.all(locations.map((loc) => Promise.resolve(generateForLocation(loc, req))));
+  return Promise.all(
+    locations.map(async (loc) => {
+      try {
+        const payload = buildAnalysisRequest(loc, req);
+        const data = await apiRequest<unknown>("/api/v1/analysis", {
+          method: "POST",
+          json: payload,
+          timeoutMs: 45000,
+        });
+        return normalizeAnalysisResult(loc, data);
+      } catch (e) {
+        return unavailable(loc, toUserErrorMessage(e));
+      }
+    }),
+  );
 }
 
 function buildAnalysisRequest(loc: Location, req: AnalysisRequest) {
@@ -196,7 +160,7 @@ function normalizeAnalysisResult(loc: Location, data: unknown): EphemerisRespons
     quality,
     provenance: provenance.length ? provenance : undefined,
     points,
-    note: provenance[0] || (points.length ? "Análise recebida do backend." : "Backend não devolveu amostras para o intervalo."),
+    note: provenance[0] || (points.length ? "Análise recebida do backend." : "Backend não devolveu amostras para o intervalo selecionado."),
   };
 }
 
@@ -257,21 +221,25 @@ function numOrNull(v: unknown): number | null {
 }
 
 export async function getDataQuality(locationId: string): Promise<DataQualityInfo> {
-  const backend = getBackendMode();
-  if (backend === "live") {
+  if (!isApiConfigured()) {
     return {
       locationId,
-      source: "real",
+      source: "unavailable",
       quality: null,
-      provenance: ["Consultar metadados de /api/v1/analysis (model, sources, quality, caveats)."],
-      notes: "Qualidade/proveniência detalhada depende da resposta de análise do backend.",
+      provenance: ["API não configurada."],
+      notes: "Defina NEXT_PUBLIC_API_URL para obter dados do backend.",
     };
   }
   return {
     locationId,
-    source: "mock",
-    quality: 0.45,
-    provenance: ["Série sintética gerada no frontend (offline)."],
-    notes: "Sem backend ativo; valores não científicos.",
+    source: "real",
+    quality: null,
+    provenance: ["Qualidade/proveniência detalhada disponível na resposta de /api/v1/analysis (model, sources, caveats, quality)."],
+    notes: "Consultar metadados devolvidos pelo backend por análise.",
   };
+}
+
+// Compatibilidade com chamadas existentes na UI
+export function getBackendMode(): "offline" | "live" {
+  return isApiConfigured() ? "live" : "offline";
 }
