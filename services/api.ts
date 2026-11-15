@@ -15,6 +15,12 @@ export function isApiConfigured(): boolean {
   return getApiConfig().configured;
 }
 
+export function getApiDisplayBase(): string {
+  // Com proxy same-origin, a URL real do backend é configurada no servidor (LUNARIS_API_URL/API_URL).
+  const cfg = getApiConfig();
+  return cfg.baseUrl || "/api/v1 (proxy)";
+}
+
 export async function listLocations(): Promise<Location[]> {
   if (!isApiConfigured()) {
     // Sem backend configurado: expor catálogo local como referência de navegação (não resultados científicos).
@@ -75,7 +81,7 @@ export async function analyzeLocations(
   if (locations.length === 0) return [];
 
   if (!isApiConfigured()) {
-    const reason = "API não configurada (NEXT_PUBLIC_API_URL). Configure a URL do backend/tunnel.";
+    const reason = "API não configurada. Configure a variável de ambiente da API no servidor/Vercel.";
     return locations.map((loc) => unavailable(loc, reason));
   }
 
@@ -227,7 +233,7 @@ export async function getDataQuality(locationId: string): Promise<DataQualityInf
       source: "unavailable",
       quality: null,
       provenance: ["API não configurada."],
-      notes: "Defina NEXT_PUBLIC_API_URL para obter dados do backend.",
+      notes: "Configure a variável de ambiente da API no servidor/Vercel para obter dados do backend.",
     };
   }
   return {

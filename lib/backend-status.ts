@@ -30,14 +30,14 @@ function bool(v: unknown): boolean | undefined {
 export async function fetchBackendStatus(): Promise<BackendStatus> {
   const checkedAt = new Date().toISOString();
   const cfg = getApiConfig();
-  if (!cfg.configured || !cfg.baseUrl) {
+  if (!cfg.configured) {
     return {
       api: "unconfigured",
       scientificEngine: "unknown",
       ephemerisProvider: "unknown",
       dem: "unknown",
-      message: "API não configurada. Defina NEXT_PUBLIC_API_URL.",
-      details: ["Configure NEXT_PUBLIC_API_URL (ex.: URL do Cloudflare Tunnel) no ambiente."],
+      message: "API não configurada.",
+      details: ["Configure a variável de ambiente da API (ex.: LUNARIS_API_URL) no servidor/Vercel."],
       checkedAt,
     };
   }

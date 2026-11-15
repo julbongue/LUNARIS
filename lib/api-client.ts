@@ -49,11 +49,11 @@ function kindFromStatus(status: number): ApiErrorKind {
 function userMessage(kind: ApiErrorKind, status?: number, detail?: string): string {
   switch (kind) {
     case "config":
-      return "API não configurada (defina NEXT_PUBLIC_API_URL).";
+      return "API não configurada (defina a variável de ambiente da API no servidor/Vercel).";
     case "timeout":
       return "Tempo limite excedido ao contactar o backend (tunnel/API pode estar indisponível).";
     case "network":
-      return "Não foi possível contactar o backend. Verifique o Cloudflare Tunnel, a URL da API, CORS e a ligação.";
+      return "Não foi possível contactar o backend. Verifique o Cloudflare Tunnel, a URL da API e a ligação.";
     case "unauthorized":
       return "Acesso não autorizado à API (401).";
     case "forbidden":

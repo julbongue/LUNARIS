@@ -8,8 +8,7 @@ import { LocationPanel } from "@/components/explorer/LocationPanel";
 import { ComparisonPanel } from "@/components/explorer/ComparisonPanel";
 import { Timeline } from "@/components/explorer/Timeline";
 import { BackendStatusBadge } from "@/components/explorer/BackendStatusBadge";
-import { analyzeLocations, isApiConfigured } from "@/services/api";
-import { getApiConfig } from "@/lib/api-config";
+import { analyzeLocations, getApiDisplayBase, isApiConfigured } from "@/services/api";
 import type { EphemerisResponse } from "@/lib/models";
 
 type SectionId = "overview" | "explorer" | "comparison" | "history" | "data";
@@ -46,7 +45,7 @@ function ExplorerShell() {
   const [history, setHistory] = useState<{ at: string; sites: string[]; start: string; end: string; step: number; mode: string }[]>([]);
 
   const apiConfigured = useMemo(() => isApiConfigured(), []);
-  const apiBase = useMemo(() => getApiConfig().baseUrl, []);
+  const apiBase = useMemo(() => getApiDisplayBase(), []);
 
   const runAnalysis = async (s: string, e: string, st: number) => {
     if (sites.length === 0) return;
@@ -91,7 +90,7 @@ function ExplorerShell() {
         </nav>
         <div className="border-t border-[#1e2a37] p-3 text-[10px] text-[#6b7a8a]">
           <div>API: <span className={apiConfigured ? "text-[#8FAFC7]" : "text-[#E89A55]"}>{apiConfigured ? "configurada" : "não configurada"}</span></div>
-          <div className="break-all">Base: {apiBase || "defina NEXT_PUBLIC_API_URL"}</div>
+          <div className="break-all">Base: {apiBase}</div>
         </div>
       </aside>
 
@@ -139,7 +138,7 @@ function ExplorerShell() {
           {active === "overview" && (
             <section className="grid gap-4 md:grid-cols-2">
               <InfoCard title="Objetivo" text="Ferramenta de exploração e análise lunar para comparar condições científicas de até três locais, com base em dados fornecidos pela API LUNARIS quando disponíveis." />
-              <InfoCard title="Estado da integração" text={`API configurada: ${apiConfigured ? `sim (${apiBase})` : "não"}. O frontend comunica com o backend FastAPI via NEXT_PUBLIC_API_URL (ex.: Cloudflare Tunnel). Sem backend acessível, as análises retornam estado indisponível sem fabricar resultados.`} />
+              <InfoCard title="Estado da integração" text={`Integração via proxy do Next.js para o backend FastAPI (configurado no servidor/Vercel por variável de ambiente, ex.: LUNARIS_API_URL). Sem backend acessível, as análises retornam estado indisponível sem fabricar resultados.`} />
               <InfoCard title="Experiência principal" text="Use o Lunar Explorer para interagir com o globo 3D, selecionar locais, definir intervalo/passo temporal e comparar resultados lado a lado." />
               <InfoCard title="Disponibilidade" text="O estado do backend/motores é verificado via /api/v1/health e /api/v1/capabilities (API, motor científico, efemérides, DEM/topografia) e apresentado na interface." />
             </section>
