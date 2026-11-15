@@ -34,6 +34,40 @@ export interface RequestOptions extends Omit<RequestInit, "body"> {
   json?: unknown;
 }
 
+export type ApiErrorMessages = {
+  config: string;
+  timeout: string;
+  network: string;
+  unauthorized: string;
+  forbidden: string;
+  notFound: string;
+  unprocessable: string;
+  rateLimited: string;
+  unavailable: string;
+  server: string;
+  invalidResponse: string;
+  badRequest: string;
+  unknown: string;
+  unexpected: string;
+};
+
+const DEFAULT_API_ERROR_MESSAGES: ApiErrorMessages = {
+  config: "API not configured (set the API environment variable on the server/Vercel).",
+  timeout: "Timeout while contacting the backend (tunnel/API may be unavailable).",
+  network: "Could not contact the backend. Check the Cloudflare Tunnel, the API URL, and the connection.",
+  unauthorized: "Unauthorized access to the API (401).",
+  forbidden: "Access denied by the API (403).",
+  notFound: "Resource not found in the API (404).",
+  unprocessable: "Invalid request for the API (422).",
+  rateLimited: "API request limit exceeded (429).",
+  unavailable: "API/engine temporarily unavailable (503).",
+  server: "API server error ({status}).",
+  invalidResponse: "Invalid response received from the API.",
+  badRequest: "Error communicating with the API ({status}).",
+  unknown: "unknown",
+  unexpected: "Unexpected error.",
+};
+
 function kindFromStatus(status: number): ApiErrorKind {
   if (status === 400) return "bad_request";
   if (status === 401) return "unauthorized";
@@ -46,39 +80,42 @@ function kindFromStatus(status: number): ApiErrorKind {
   return "bad_request";
 }
 
-function userMessage(kind: ApiErrorKind, status?: number, detail?: string): string {
+function format(msg: string, vars: Record<string, string | number>) {
+  return msg.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
+}
+
+function userMessage(kind: ApiErrorKind, status?: number, detail?: string, messages: ApiErrorMessages = DEFAULT_API_ERROR_MESSAGES): string {
   switch (kind) {
     case "config":
-      return "API não configurada (defina a variável de ambiente da API no servidor/Vercel).";
+      return messages.config;
     case "timeout":
-      return "Tempo limite excedido ao contactar o backend (tunnel/API pode estar indisponível).";
+      return messages.timeout;
     case "network":
-      return "Não foi possível contactar o backend. Verifique o Cloudflare Tunnel, a URL da API e a ligação.";
+      return messages.network;
     case "unauthorized":
-      return "Acesso não autorizado à API (401).";
+      return messages.unauthorized;
     case "forbidden":
-      return "Acesso negado pela API (403).";
+      return messages.forbidden;
     case "not_found":
-      return "Recurso não encontrado na API (404).";
+      return messages.notFound;
     case "unprocessable":
-      return detail || "Pedido inválido para a API (422).";
+      return detail || messages.unprocessable;
     case "rate_limited":
-      return "Limite de pedidos excedido na API (429).";
+      return messages.rateLimited;
     case "unavailable":
-      return "API/motor temporariamente indisponível (503).";
+      return messages.unavailable;
     case "server":
-      return `Erro no servidor da API (${status ?? 500}).`;
+      return format(messages.server, { status: status ?? 500 });
     case "invalid_response":
-      return "Resposta inválida recebida da API.";
+      return messages.invalidResponse;
     case "bad_request":
     default:
-      return detail || `Erro na comunicação com a API (${status ?? "desconhecido"}).`;
+      return detail || format(messages.badRequest, { status: status ?? messages.unknown });
   }
 }
 
 function sanitizeDetail(input: unknown): string | undefined {
   if (typeof input === "string") {
-    // evitar expor detalhes internos extensos
     return input.length > 300 ? `${input.slice(0, 300)}…` : input;
   }
   return undefined;
@@ -164,8 +201,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 }
 
-export function toUserErrorMessage(err: unknown): string {
-  if (err instanceof ApiClientError) return err.message;
-  if (err instanceof Error) return err.message || "Erro inesperado.";
-  return "Erro inesperado.";
+export function toUserErrorMessage(err: unknown, messages?: ApiErrorMessages): string {
+  const m = messages ?? DEFAULT_API_ERROR_MESSAGES;
+  if (err instanceof ApiClientError) return userMessage(err.kind, err.status, err.detail, m);
+  if (err instanceof Error) return err.message || m.unexpected;
+  return m.unexpected;
 }

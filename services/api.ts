@@ -9,21 +9,20 @@ import type {
 } from "@/lib/models";
 import { CATALOG_LOCATIONS, pickColor } from "@/lib/data-catalog";
 import { getApiConfig } from "@/lib/api-config";
-import { apiRequest, toUserErrorMessage } from "@/lib/api-client";
+import { apiRequest, toUserErrorMessage, type ApiErrorMessages } from "@/lib/api-client";
+import type { Dictionary } from "@/lib/i18n/dictionaries";
 
 export function isApiConfigured(): boolean {
   return getApiConfig().configured;
 }
 
 export function getApiDisplayBase(): string {
-  // Com proxy same-origin, a URL real do backend é configurada no servidor (LUNARIS_API_URL/API_URL).
   const cfg = getApiConfig();
   return cfg.baseUrl || "/api/v1 (proxy)";
 }
 
 export async function listLocations(): Promise<Location[]> {
   if (!isApiConfigured()) {
-    // Sem backend configurado: expor catálogo local como referência de navegação (não resultados científicos).
     return CATALOG_LOCATIONS.map((l) => ({ ...l }));
   }
   try {
@@ -56,33 +55,39 @@ function mapBackendSite(s: unknown, i: number): Location {
   };
 }
 
-export async function createLocalLocation(input: LocationInput): Promise<Location> {
+export async function createLocalLocation(input: LocationInput, messages?: Pick<Dictionary, "locations" | "apiErrors">): Promise<Location> {
   const lat = Number(input.latitude);
   const lon = Number(input.longitude);
   const altitudeM = input.altitudeM ? Number(input.altitudeM) : undefined;
   return {
     id: (typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `loc-${Date.now()}`),
-    name: input.name.trim() || "Local sem nome",
+    name: input.name.trim() || messages?.locations.unnamedSite || "Unnamed site",
     latitude: isFinite(lat) ? lat : 0,
     longitude: isFinite(lon) ? lon : 0,
     coordinateSystem: input.coordinateSystem,
     altitudeM: altitudeM != null && isFinite(altitudeM) ? altitudeM : undefined,
     color: input.color || pickColor(0),
     source: "mock",
-    notes: "Local definido pelo utilizador (não persistido no backend).",
+    notes: messages?.apiErrors.userSiteNotes || "Site defined by the user (not persisted in the backend).",
     createdAt: new Date().toISOString(),
   };
+}
+
+function fmt(template: string, vars?: Record<string, string | number>) {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_, k) => (vars[k] != null ? String(vars[k]) : `{${k}}`));
 }
 
 export async function analyzeLocations(
   locations: Location[],
   req: AnalysisRequest,
+  messages?: Pick<Dictionary, "apiErrors"> & { apiErrorMessages?: ApiErrorMessages },
 ): Promise<EphemerisResponse[]> {
   if (locations.length === 0) return [];
 
   if (!isApiConfigured()) {
-    const reason = "API não configurada. Configure a variável de ambiente da API no servidor/Vercel.";
-    return locations.map((loc) => unavailable(loc, reason));
+    const reason = messages?.apiErrors.unconfiguredEnv || "API not configured. Set the API environment variable on the server/Vercel.";
+    return locations.map((loc) => unavailable(loc, reason, messages?.apiErrors));
   }
 
   return Promise.all(
@@ -94,9 +99,9 @@ export async function analyzeLocations(
           json: payload,
           timeoutMs: 45000,
         });
-        return normalizeAnalysisResult(loc, data);
+        return normalizeAnalysisResult(loc, data, messages?.apiErrors);
       } catch (e) {
-        return unavailable(loc, toUserErrorMessage(e));
+        return unavailable(loc, toUserErrorMessage(e, messages?.apiErrorMessages), messages?.apiErrors);
       }
     }),
   );
@@ -119,10 +124,7 @@ function buildAnalysisRequest(loc: Location, req: AnalysisRequest) {
     stop_time: end,
     step_minutes: Math.max(1, Math.round(req.stepHours * 60)),
     site,
-    thresholds: {
-      sun_elevation_deg: 0,
-      earth_elevation_deg: 5,
-    },
+    thresholds: { sun_elevation_deg: 0, earth_elevation_deg: 5 },
     include_samples: true,
     coordinate_system: loc.coordinateSystem === "planetographic" ? "planetographic" : "planetocentric",
     reference_frame: "selenographic",
@@ -131,15 +133,12 @@ function buildAnalysisRequest(loc: Location, req: AnalysisRequest) {
   };
 }
 
-function normalizeAnalysisResult(loc: Location, data: unknown): EphemerisResponse {
+function normalizeAnalysisResult(loc: Location, data: unknown, apiMsgs?: Dictionary["apiErrors"]): EphemerisResponse {
   const d = asObj(data);
   const samples = Array.isArray(d.samples) ? d.samples : [];
   const caveats = Array.isArray(d.caveats) ? d.caveats.filter((x): x is string => typeof x === "string") : [];
   const sources = Array.isArray(d.sources)
-    ? d.sources.map((s) => {
-        const so = asObj(s);
-        return typeof so.name === "string" ? so.name : null;
-      }).filter((x): x is string => Boolean(x))
+    ? d.sources.map((s) => { const so = asObj(s); return typeof so.name === "string" ? so.name : null; }).filter((x): x is string => Boolean(x))
     : [];
   const model = asObj(d.model);
   const modelName = typeof model.name === "string" ? model.name : undefined;
@@ -166,7 +165,7 @@ function normalizeAnalysisResult(loc: Location, data: unknown): EphemerisRespons
     quality,
     provenance: provenance.length ? provenance : undefined,
     points,
-    note: provenance[0] || (points.length ? "Análise recebida do backend." : "Backend não devolveu amostras para o intervalo selecionado."),
+    note: provenance[0] || (points.length ? (apiMsgs?.analysisReceived || "Analysis received from the backend.") : (apiMsgs?.noSamples || "Backend did not return samples for the selected interval.")),
   };
 }
 
@@ -176,17 +175,14 @@ function mapSample(s: unknown): EphemerisPoint {
   const earthElev = numOrNull(so.earth_elevation_deg);
   const sunAbove = typeof so.sun_above_threshold === "boolean" ? so.sun_above_threshold : null;
   const earthAbove = typeof so.earth_above_threshold === "boolean" ? so.earth_above_threshold : null;
-
   const solarVisibility = sunAbove != null ? (sunAbove ? 1 : 0) : (sunElev != null ? (sunElev > 0 ? 1 : 0) : null);
   const earthVisibility = earthAbove != null ? (earthAbove ? 1 : 0) : (earthElev != null ? (earthElev > 0 ? 1 : 0) : null);
-
   let illumination: string | null = null;
   if (sunElev != null) {
     if (sunElev > 0.5) illumination = "iluminado";
     else if (sunElev >= -0.5) illumination = "terminador/crepúsculo";
     else illumination = "sombra";
   }
-
   return {
     instant: typeof so.timestamp === "string" ? so.timestamp : "",
     solarElevationDeg: sunElev,
@@ -204,7 +200,7 @@ function mapSample(s: unknown): EphemerisPoint {
   };
 }
 
-function unavailable(loc: Location, reason: string): EphemerisResponse {
+function unavailable(loc: Location, reason: string, apiMsgs?: Dictionary["apiErrors"]): EphemerisResponse {
   return {
     locationId: loc.id,
     name: loc.name,
@@ -213,39 +209,35 @@ function unavailable(loc: Location, reason: string): EphemerisResponse {
     quality: null,
     provenance: [reason],
     points: [],
-    note: `Dados indisponíveis: ${reason}`,
+    note: fmt(apiMsgs?.dataUnavailable || "Unavailable data: {reason}", { reason }),
   };
 }
 
-function asObj(v: unknown): Record<string, unknown> {
-  return v && typeof v === "object" ? (v as Record<string, unknown>) : {};
-}
-
+function asObj(v: unknown): Record<string, unknown> { return v && typeof v === "object" ? (v as Record<string, unknown>) : {}; }
 function numOrNull(v: unknown): number | null {
   const n = typeof v === "number" ? v : (v == null ? NaN : Number(v));
   return Number.isFinite(n) ? n : null;
 }
 
-export async function getDataQuality(locationId: string): Promise<DataQualityInfo> {
+export async function getDataQuality(locationId: string, messages?: Pick<Dictionary, "apiErrors">): Promise<DataQualityInfo> {
   if (!isApiConfigured()) {
     return {
       locationId,
       source: "unavailable",
       quality: null,
-      provenance: ["API não configurada."],
-      notes: "Configure a variável de ambiente da API no servidor/Vercel para obter dados do backend.",
+      provenance: [messages?.apiErrors.unconfiguredEnv || "API not configured."],
+      notes: messages?.apiErrors.configureEnvForData || "Set the API environment variable on the server/Vercel to obtain data from the backend.",
     };
   }
   return {
     locationId,
     source: "real",
     quality: null,
-    provenance: ["Qualidade/proveniência detalhada disponível na resposta de /api/v1/analysis (model, sources, caveats, quality)."],
-    notes: "Consultar metadados devolvidos pelo backend por análise.",
+    provenance: [messages?.apiErrors.qualityProvNote || "Detailed quality/provenance available in the /api/v1/analysis response (model, sources, caveats, quality)."],
+    notes: messages?.apiErrors.qualityConsult || "Consult metadata returned by the backend per analysis.",
   };
 }
 
-// Compatibilidade com chamadas existentes na UI
 export function getBackendMode(): "offline" | "live" {
   return isApiConfigured() ? "live" : "offline";
 }

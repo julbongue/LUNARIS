@@ -8,18 +8,13 @@ import { LocationPanel } from "@/components/explorer/LocationPanel";
 import { ComparisonPanel } from "@/components/explorer/ComparisonPanel";
 import { Timeline } from "@/components/explorer/Timeline";
 import { BackendStatusBadge } from "@/components/explorer/BackendStatusBadge";
+import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { analyzeLocations, getApiDisplayBase, isApiConfigured } from "@/services/api";
+import { useI18n } from "@/lib/i18n/provider";
 import type { EphemerisResponse } from "@/lib/models";
 
 type SectionId = "overview" | "explorer" | "comparison" | "history" | "data";
-
-const NAV: { id: SectionId; label: string; icon: React.ComponentType<{ size?: number; className?: string }> }[] = [
-  { id: "overview", label: "Mission Overview", icon: LayoutDashboard },
-  { id: "explorer", label: "Lunar Explorer", icon: Globe2 },
-  { id: "comparison", label: "Site Comparison", icon: Map },
-  { id: "history", label: "Analysis History", icon: History },
-  { id: "data", label: "Data & Models", icon: Database },
-];
 
 export default function Page() {
   return (
@@ -30,6 +25,7 @@ export default function Page() {
 }
 
 function ExplorerShell() {
+  const { t, tr } = useI18n();
   const { sites } = useLocations();
   const [active, setActive] = useState<SectionId>("explorer");
   const [analysis, setAnalysis] = useState<EphemerisResponse[] | null>(null);
@@ -47,6 +43,14 @@ function ExplorerShell() {
   const apiConfigured = useMemo(() => isApiConfigured(), []);
   const apiBase = useMemo(() => getApiDisplayBase(), []);
 
+  const NAV = [
+    { id: "overview" as SectionId, label: t.nav.overview, icon: LayoutDashboard },
+    { id: "explorer" as SectionId, label: t.nav.explorer, icon: Globe2 },
+    { id: "comparison" as SectionId, label: t.nav.comparison, icon: Map },
+    { id: "history" as SectionId, label: t.nav.history, icon: History },
+    { id: "data" as SectionId, label: t.nav.data, icon: Database },
+  ];
+
   const runAnalysis = async (s: string, e: string, st: number) => {
     if (sites.length === 0) return;
     setStart(s); setEnd(e); setStep(st);
@@ -58,11 +62,11 @@ function ExplorerShell() {
         intervalStart: s,
         intervalEnd: e,
         stepHours: st,
-      });
+      }, { apiErrors: t.apiErrors, apiErrorMessages: t.apiErrors });
       setAnalysis(res);
       setHistory((h) => [{ at: new Date().toISOString(), sites: sites.map((x) => x.name), start: s, end: e, step: st, mode: apiConfigured ? "live" : "unconfigured" }, ...h].slice(0, 20));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Falha ao executar análise.");
+      setError(err instanceof Error ? err.message : t.apiErrors.analysisFailed);
     } finally {
       setLoading(false);
     }
@@ -71,44 +75,50 @@ function ExplorerShell() {
   const clearAnalysis = () => { setAnalysis(null); setError(null); };
 
   return (
-    <div className="min-h-screen bg-[#0a1018] text-[#D5D2C9] lg:pl-[240px]">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] border-r border-[#1e2a37] bg-[#101820] lg:flex lg:flex-col">
-        <div className="flex items-center gap-3 border-b border-[#1e2a37] px-4 py-4">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-[#172B40] text-sm font-bold text-[#8FAFC7]">L</span>
+    <div className="min-h-screen bg-lunar-bg text-lunar-text lg:pl-[240px]">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-[240px] border-r border-lunar-border bg-lunar-surface lg:flex lg:flex-col">
+        <div className="flex items-center gap-3 border-b border-lunar-border px-4 py-4">
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-lunar-surface-3 text-sm font-bold text-lunar-accent">L</span>
           <div>
-            <div className="text-sm font-bold tracking-wide text-[#F1F0EB]">LUNARIS</div>
-            <div className="text-[10px] uppercase tracking-[0.16em] text-[#6b7a8a]">Lunar Explorer</div>
+            <div className="text-sm font-bold tracking-wide text-lunar-text-strong">{t.common.appName}</div>
+            <div className="text-[10px] uppercase tracking-[0.16em] text-lunar-text-faint">{t.common.appSubtitle}</div>
           </div>
         </div>
         <nav className="flex flex-1 flex-col gap-1 p-2">
           {NAV.map(({ id, label, icon: Icon }) => (
-            <button key={id} onClick={() => setActive(id)} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition ${active === id ? "bg-[#172B40] text-[#F1F0EB] shadow-[inset_3px_0_0_#E89A55]" : "text-[#aeb9c4] hover:bg-[#162230] hover:text-[#F1F0EB]"}`}>
+            <button key={id} onClick={() => setActive(id)} className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition ${active === id ? "bg-lunar-surface-3 text-lunar-text-strong shadow-[inset_3px_0_0_var(--lunar-signal)]" : "text-lunar-text-muted hover:bg-lunar-surface-2 hover:text-lunar-text-strong"}`}>
               <Icon size={16} />
               <span>{label}</span>
             </button>
           ))}
         </nav>
-        <div className="border-t border-[#1e2a37] p-3 text-[10px] text-[#6b7a8a]">
-          <div>API: <span className={apiConfigured ? "text-[#8FAFC7]" : "text-[#E89A55]"}>{apiConfigured ? "configurada" : "não configurada"}</span></div>
-          <div className="break-all">Base: {apiBase}</div>
+        <div className="border-t border-lunar-border p-3 text-[10px] text-lunar-text-faint">
+          <div>{t.sidebar.api}: <span className={apiConfigured ? "text-lunar-accent" : "text-lunar-signal"}>{apiConfigured ? t.sidebar.configured : t.sidebar.notConfigured}</span></div>
+          <div className="break-all">{t.sidebar.base}: {apiBase}</div>
         </div>
       </aside>
 
       <div className="flex min-h-screen flex-col">
-        <header className="sticky top-0 z-20 border-b border-[#1e2a37] bg-[#101820]/95 px-4 py-3 backdrop-blur">
+        <header className="sticky top-0 z-20 border-b border-lunar-border bg-lunar-surface/95 px-4 py-3 backdrop-blur">
           <div className="mx-auto flex max-w-[1600px] items-center justify-between gap-3">
-            <div>
-              <div className="text-base font-semibold text-[#F1F0EB]">{NAV.find((n) => n.id === active)?.label}</div>
-              <div className="text-xs text-[#8FAFC7]">Exploração e análise lunar · até 3 locais em comparação</div>
+            <div className="min-w-0">
+              <div className="truncate text-base font-semibold text-lunar-text-strong">{NAV.find((n) => n.id === active)?.label}</div>
+              <div className="hidden text-xs text-lunar-text-muted sm:block">{t.header.subtitle}</div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[#8FAFC7]">
-              <span className="rounded-full border border-[#2a3a4a] bg-[#0d1824] px-2.5 py-1">Locais: {sites.length}/3</span>
-              <span className={`rounded-full border px-2.5 py-1 ${apiConfigured ? "border-[#2a3a4a] bg-[#0d1824] text-[#8FAFC7]" : "border-[#4a3522] bg-[#1d140c] text-[#E89A55]"}`}>{apiConfigured ? "Dados: backend/API" : "API não configurada"}</span>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 text-xs text-lunar-text-muted">
+              <span className="hidden rounded-full border border-lunar-border-strong bg-lunar-surface-2 px-2.5 py-1 sm:inline-flex">{tr(t.header.sitesCount, { count: sites.length })}</span>
+              <span className={`hidden rounded-full border px-2.5 py-1 md:inline-flex ${apiConfigured ? "border-lunar-border-strong bg-lunar-surface-2 text-lunar-accent" : "border-lunar-signal/40 bg-lunar-surface-2 text-lunar-signal"}`}>{apiConfigured ? t.common.dataBackendApi : t.common.apiNotConfiguredShort}</span>
+              <LanguageSwitcher compact />
+              <ThemeToggle />
             </div>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-lunar-text-muted sm:hidden">
+            <span>{tr(t.header.sitesCount, { count: sites.length })}</span>
+            <span className={apiConfigured ? "text-lunar-accent" : "text-lunar-signal"}>{apiConfigured ? t.common.dataBackendApi : t.common.apiNotConfiguredShort}</span>
           </div>
           <div className="mt-3 flex gap-1 overflow-x-auto lg:hidden">
             {NAV.map(({ id, label }) => (
-              <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs ${active === id ? "bg-[#172B40] text-[#F1F0EB]" : "text-[#8FAFC7]"}`}>{label}</button>
+              <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-md px-2.5 py-1.5 text-xs ${active === id ? "bg-lunar-surface-3 text-lunar-text-strong" : "text-lunar-text-muted"}`}>{label}</button>
             ))}
           </div>
         </header>
@@ -116,8 +126,8 @@ function ExplorerShell() {
         <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 p-4">
           {active === "explorer" && (
             <>
-              <div className="rounded-xl border border-[#1e2a37] bg-[#0d1824] px-4 py-3 text-sm text-[#D5D2C9]">
-                <span className="font-medium text-[#F1F0EB]">Lunar Explorer:</span> selecione até três locais no globo ou no painel, execute a análise e compare visibilidade solar/terrestre, iluminação e janelas de comunicação no mesmo intervalo temporal.
+              <div className="rounded-xl border border-lunar-border bg-lunar-surface-2 px-4 py-3 text-sm text-lunar-text">
+                <span className="font-medium text-lunar-text-strong">{t.explorer.introLead}</span>{t.explorer.introText}
               </div>
               <div className="grid min-w-0 gap-4 xl:grid-cols-[1.7fr_1fr]">
                 <div className="min-h-[480px] min-w-0 xl:min-h-[620px]">
@@ -137,34 +147,34 @@ function ExplorerShell() {
 
           {active === "overview" && (
             <section className="grid gap-4 md:grid-cols-2">
-              <InfoCard title="Objetivo" text="Ferramenta de exploração e análise lunar para comparar condições científicas de até três locais, com base em dados fornecidos pela API LUNARIS quando disponíveis." />
-              <InfoCard title="Estado da integração" text={`Integração via proxy do Next.js para o backend FastAPI (configurado no servidor/Vercel por variável de ambiente, ex.: LUNARIS_API_URL). Sem backend acessível, as análises retornam estado indisponível sem fabricar resultados.`} />
-              <InfoCard title="Experiência principal" text="Use o Lunar Explorer para interagir com o globo 3D, selecionar locais, definir intervalo/passo temporal e comparar resultados lado a lado." />
-              <InfoCard title="Disponibilidade" text="O estado do backend/motores é verificado via /api/v1/health e /api/v1/capabilities (API, motor científico, efemérides, DEM/topografia) e apresentado na interface." />
+              <InfoCard title={t.overview.objectiveTitle} text={t.overview.objectiveText} />
+              <InfoCard title={t.overview.integrationTitle} text={t.overview.integrationText} />
+              <InfoCard title={t.overview.experienceTitle} text={t.overview.experienceText} />
+              <InfoCard title={t.overview.availabilityTitle} text={t.overview.availabilityText} />
             </section>
           )}
 
           {active === "comparison" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-[#1e2a37] bg-[#0d1824] px-4 py-3 text-sm text-[#8FAFC7]">Comparação detalhada dos últimos resultados analisados no Lunar Explorer.</div>
+              <div className="rounded-xl border border-lunar-border bg-lunar-surface-2 px-4 py-3 text-sm text-lunar-text-muted">{t.comparisonPage.intro}</div>
               <ComparisonPanel analysis={analysis} sites={sites} />
             </div>
           )}
 
           {active === "history" && (
-            <section className="rounded-2xl border border-[#1e2a37] bg-[#101820]/80 p-4">
-              <h2 className="mb-3 text-sm font-semibold text-[#F1F0EB]">Analysis History (sessão)</h2>
+            <section className="rounded-2xl border border-lunar-border bg-lunar-surface/80 p-4">
+              <h2 className="mb-3 text-sm font-semibold text-lunar-text-strong">{t.history.title}</h2>
               {history.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-[#2a3a4a] p-4 text-sm text-[#8FAFC7]">Nenhuma análise executada nesta sessão.</div>
+                <div className="rounded-lg border border-dashed border-lunar-border-strong p-4 text-sm text-lunar-text-muted">{t.history.empty}</div>
               ) : (
                 <ul className="space-y-2">
                   {history.map((h, i) => (
-                    <li key={i} className="rounded-lg border border-[#2a3a4a] bg-[#0d1824] p-3 text-sm">
+                    <li key={i} className="rounded-lg border border-lunar-border-strong bg-lunar-surface-2 p-3 text-sm">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="text-[#F1F0EB]">{new Date(h.at).toLocaleString()} · <span className="text-[#8FAFC7]">{h.mode}</span></div>
-                        <div className="font-mono text-xs text-[#8FAFC7]">{h.start} → {h.end} · passo {h.step}h</div>
+                        <div className="text-lunar-text-strong">{new Date(h.at).toLocaleString()} · <span className="text-lunar-text-muted">{h.mode}</span></div>
+                        <div className="font-mono text-xs text-lunar-text-muted">{h.start} → {h.end} · {h.step}h</div>
                       </div>
-                      <div className="mt-1 text-xs text-[#D5D2C9]">Locais: {h.sites.join(", ") || "—"}</div>
+                      <div className="mt-1 text-xs text-lunar-text">{t.history.sites}: {h.sites.join(", ") || "—"}</div>
                     </li>
                   ))}
                 </ul>
@@ -174,18 +184,18 @@ function ExplorerShell() {
 
           {active === "data" && (
             <section className="grid gap-4 md:grid-cols-2">
-              <InfoCard title="Fontes visuais" text="Globo 3D utiliza texturas lunares públicas de three.js (derivadas de NASA/USGS LRO) para visualização. A textura é ilustrativa e distinta dos dados científicos calculados pelo backend." />
-              <InfoCard title="Modelos e proveniência" text="Cada resultado deve indicar fonte (real/mock/sintético/indisponível), qualidade e proveniência quando fornecidos pela API. O frontend não calcula métricas científicas." />
-              <InfoCard title="Contrato/API" text="Integração baseada nos endpoints reais do backend (/api/v1/analysis, /api/v1/health, /api/v1/capabilities, /api/v1/sites). Chamadas independentes por local, agregação no frontend e degradação para 'Não disponível' em falhas ou indisponibilidade." />
-              <InfoCard title="Catálogo de referência" text="Inclui locais de referência (ex.: Shackleton, Mare Tranquillitatis, Tycho) para navegação rápida; coordenadas são indicativas e podem ser editadas pelo utilizador." />
+              <InfoCard title={t.data.visualTitle} text={t.data.visualText} />
+              <InfoCard title={t.data.modelsTitle} text={t.data.modelsText} />
+              <InfoCard title={t.data.contractTitle} text={t.data.contractText} />
+              <InfoCard title={t.data.catalogTitle} text={t.data.catalogText} />
             </section>
           )}
         </main>
 
-        <footer className="border-t border-[#1e2a37] px-4 py-3 text-[11px] text-[#6b7a8a]">
+        <footer className="border-t border-lunar-border px-4 py-3 text-[11px] text-lunar-text-faint">
           <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-2">
-            <span>LUNARIS · Lunar Explorer</span>
-            <span>Identificação de dados: real / mock / sintético / indisponível</span>
+            <span>{t.footer.app}</span>
+            <span>{t.footer.dataId}</span>
           </div>
         </footer>
       </div>
@@ -195,9 +205,9 @@ function ExplorerShell() {
 
 function InfoCard({ title, text }: { title: string; text: string }) {
   return (
-    <article className="rounded-2xl border border-[#1e2a37] bg-[#101820]/80 p-4">
-      <h3 className="mb-1 text-sm font-semibold text-[#F1F0EB]">{title}</h3>
-      <p className="text-sm leading-relaxed text-[#8FAFC7]">{text}</p>
+    <article className="rounded-2xl border border-lunar-border bg-lunar-surface/80 p-4">
+      <h3 className="mb-1 text-sm font-semibold text-lunar-text-strong">{title}</h3>
+      <p className="text-sm leading-relaxed text-lunar-text-muted">{text}</p>
     </article>
   );
 }

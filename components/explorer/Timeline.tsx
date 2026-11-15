@@ -2,16 +2,8 @@
 
 import { useMemo, useState } from "react";
 import type { EphemerisResponse, Location } from "@/lib/models";
-import {
-  CartesianGrid,
-  Legend,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useI18n } from "@/lib/i18n/provider";
 
 interface Props {
   sites: Location[];
@@ -28,6 +20,7 @@ interface Props {
 const STEP_OPTIONS = [1, 3, 6, 12, 24];
 
 export function Timeline({ sites, analysis, loading, error, start, end, step, onRun, onClear }: Props) {
+  const { t } = useI18n();
   const [cursor, setCursor] = useState<number>(0);
 
   const chartData = useMemo(() => {
@@ -53,51 +46,52 @@ export function Timeline({ sites, analysis, loading, error, start, end, step, on
   }, [analysis]);
 
   const clampedCursor = Math.min(cursor, Math.max(0, chartData.length - 1));
+  const inputCls = "mt-0.5 max-w-full rounded border border-lunar-border-strong bg-lunar-bg px-2 py-1 text-xs text-lunar-text-strong";
 
   return (
-    <section className="min-w-0 overflow-hidden rounded-2xl border border-[#1e2a37] bg-[#101820]/80 p-4">
+    <section className="min-w-0 overflow-hidden rounded-2xl border border-lunar-border bg-lunar-surface/80 p-4">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-[#F1F0EB]">Linha temporal</h2>
-          <p className="text-xs text-[#8FAFC7]">Comparação dos locais no mesmo instante, intervalo e passo de amostragem.</p>
+          <h2 className="text-sm font-semibold text-lunar-text-strong">{t.timeline.title}</h2>
+          <p className="text-xs text-lunar-text-muted">{t.timeline.subtitle}</p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col text-[11px] text-[#8FAFC7]">Início
-            <input type="date" value={start} onChange={(e) => onRun(e.target.value, end, step)} className="mt-0.5 max-w-full rounded border border-[#2a3a4a] bg-[#0a1018] px-2 py-1 text-xs text-[#F1F0EB]" />
+          <label className="flex flex-col text-[11px] text-lunar-text-muted">{t.timeline.start}
+            <input type="date" value={start} onChange={(e) => onRun(e.target.value, end, step)} className={inputCls} />
           </label>
-          <label className="flex flex-col text-[11px] text-[#8FAFC7]">Fim
-            <input type="date" value={end} onChange={(e) => onRun(start, e.target.value, step)} className="mt-0.5 max-w-full rounded border border-[#2a3a4a] bg-[#0a1018] px-2 py-1 text-xs text-[#F1F0EB]" />
+          <label className="flex flex-col text-[11px] text-lunar-text-muted">{t.timeline.end}
+            <input type="date" value={end} onChange={(e) => onRun(start, e.target.value, step)} className={inputCls} />
           </label>
-          <label className="flex flex-col text-[11px] text-[#8FAFC7]">Passo (h)
-            <select value={step} onChange={(e) => onRun(start, end, Number(e.target.value))} className="mt-0.5 rounded border border-[#2a3a4a] bg-[#0a1018] px-2 py-1 text-xs text-[#F1F0EB]">
+          <label className="flex flex-col text-[11px] text-lunar-text-muted">{t.timeline.step}
+            <select value={step} onChange={(e) => onRun(start, end, Number(e.target.value))} className={inputCls}>
               {STEP_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
           </label>
-          <button onClick={() => onRun(start, end, step)} disabled={loading || sites.length === 0} className="rounded bg-[#172B40] px-3 py-1.5 text-xs font-medium text-[#F1F0EB] hover:bg-[#1f3954] disabled:opacity-40">
-            {loading ? "A analisar..." : "Analisar"}
+          <button onClick={() => onRun(start, end, step)} disabled={loading || sites.length === 0} className="rounded bg-lunar-surface-3 px-3 py-1.5 text-xs font-medium text-lunar-text-strong hover:opacity-90 disabled:opacity-40">
+            {loading ? t.common.analyzing : t.common.analyze}
           </button>
-          <button onClick={onClear} disabled={loading} className="rounded border border-[#2a3a4a] px-3 py-1.5 text-xs text-[#D5D2C9] hover:bg-[#172B40] disabled:opacity-40">Limpar</button>
+          <button onClick={onClear} disabled={loading} className="rounded border border-lunar-border-strong px-3 py-1.5 text-xs text-lunar-text hover:bg-lunar-surface-3 disabled:opacity-40">{t.common.clear}</button>
         </div>
       </div>
 
-      {sites.length === 0 && <div className="rounded-lg border border-dashed border-[#2a3a4a] p-4 text-sm text-[#8FAFC7]">Selecione pelo menos um local para executar a análise temporal.</div>}
-      {error && <div className="mb-3 rounded-lg border border-[#5a3a2a] bg-[#20140d] p-3 text-sm text-[#E89A55]">Erro na análise: {error}</div>}
-      {loading && <div className="rounded-lg border border-[#2a3a4a] bg-[#0d1824] p-4 text-sm text-[#8FAFC7]">A obter e agregar resultados para os locais selecionados...</div>}
+      {sites.length === 0 && <div className="rounded-lg border border-dashed border-lunar-border-strong p-4 text-sm text-lunar-text-muted">{t.timeline.selectSitePrompt}</div>}
+      {error && <div className="mb-3 rounded-lg border border-lunar-signal/40 bg-lunar-signal/10 p-3 text-sm text-lunar-signal">{t.timeline.errorPrefix} {error}</div>}
+      {loading && <div className="rounded-lg border border-lunar-border-strong bg-lunar-surface-2 p-4 text-sm text-lunar-text-muted">{t.timeline.loading}</div>}
 
       {!loading && analysis && analysis.length > 0 && chartData.length > 0 && (
         <div className="min-w-0 space-y-4">
           <div className="min-w-0">
-            <div className="mb-1 text-xs text-[#8FAFC7]">Elevação solar (°) ao longo do tempo</div>
+            <div className="mb-1 text-xs text-lunar-text-muted">{t.timeline.solarElevationChart}</div>
             <div className="h-64 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
-                  <CartesianGrid stroke="#1e2a37" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill: "#85847F", fontSize: 10 }} interval="preserveStartEnd" minTickGap={24} />
-                  <YAxis tick={{ fill: "#85847F", fontSize: 10 }} unit="°" domain={[-90, 90]} width={36} />
-                  <Tooltip contentStyle={{ background: "#101820", border: "1px solid #2a3a4a", color: "#F1F0EB" }} />
+                  <CartesianGrid stroke="var(--lunar-border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fill: "var(--lunar-text-faint)", fontSize: 10 }} interval="preserveStartEnd" minTickGap={24} />
+                  <YAxis tick={{ fill: "var(--lunar-text-faint)", fontSize: 10 }} unit="°" domain={[-90, 90]} width={36} />
+                  <Tooltip contentStyle={{ background: "var(--lunar-surface)", border: "1px solid var(--lunar-border-strong)", color: "var(--lunar-text-strong)" }} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {analysis.map((a) => (
-                    <Line key={a.locationId} type="monotone" dataKey={`${a.locationId}:elev`} name={`${a.name || a.locationId} (elevação solar)`} stroke={a.color || "#8FAFC7"} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
+                    <Line key={a.locationId} type="monotone" dataKey={`${a.locationId}:elev`} name={`${a.name || a.locationId} (${t.timeline.seriesElevation})`} stroke={a.color || "#8FAFC7"} strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -105,17 +99,17 @@ export function Timeline({ sites, analysis, loading, error, start, end, step, on
           </div>
 
           <div className="min-w-0">
-            <div className="mb-1 text-xs text-[#8FAFC7]">Visibilidade da Terra (%) e janelas de comunicação</div>
+            <div className="mb-1 text-xs text-lunar-text-muted">{t.timeline.earthVisibilityChart}</div>
             <div className="h-56 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData} margin={{ top: 8, right: 12, left: 0, bottom: 8 }}>
-                  <CartesianGrid stroke="#1e2a37" strokeDasharray="3 3" />
-                  <XAxis dataKey="label" tick={{ fill: "#85847F", fontSize: 10 }} interval="preserveStartEnd" minTickGap={24} />
-                  <YAxis tick={{ fill: "#85847F", fontSize: 10 }} domain={[0, 100]} unit="%" width={36} />
-                  <Tooltip contentStyle={{ background: "#101820", border: "1px solid #2a3a4a", color: "#F1F0EB" }} />
+                  <CartesianGrid stroke="var(--lunar-border)" strokeDasharray="3 3" />
+                  <XAxis dataKey="label" tick={{ fill: "var(--lunar-text-faint)", fontSize: 10 }} interval="preserveStartEnd" minTickGap={24} />
+                  <YAxis tick={{ fill: "var(--lunar-text-faint)", fontSize: 10 }} domain={[0, 100]} unit="%" width={36} />
+                  <Tooltip contentStyle={{ background: "var(--lunar-surface)", border: "1px solid var(--lunar-border-strong)", color: "var(--lunar-text-strong)" }} />
                   <Legend wrapperStyle={{ fontSize: 11 }} />
                   {analysis.map((a) => (
-                    <Line key={a.locationId + ":earth"} type="stepAfter" dataKey={`${a.locationId}:earth`} name={`${a.name || a.locationId} (Terra visível)`} stroke={a.color || "#8FAFC7"} strokeDasharray="4 3" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
+                    <Line key={a.locationId + ":earth"} type="stepAfter" dataKey={`${a.locationId}:earth`} name={`${a.name || a.locationId} (${t.timeline.seriesEarth})`} stroke={a.color || "#8FAFC7"} strokeDasharray="4 3" strokeWidth={2} dot={false} isAnimationActive={false} connectNulls />
                   ))}
                 </LineChart>
               </ResponsiveContainer>
@@ -123,23 +117,23 @@ export function Timeline({ sites, analysis, loading, error, start, end, step, on
           </div>
 
           {chartData.length > 1 && (
-            <div className="rounded-lg border border-[#2a3a4a] bg-[#0d1824] p-3">
-              <div className="mb-2 flex items-center justify-between text-xs text-[#8FAFC7]">
-                <span>Instante selecionado</span>
-                <span className="font-mono text-[#F1F0EB]">{chartData[clampedCursor]?.label}</span>
+            <div className="rounded-lg border border-lunar-border-strong bg-lunar-surface-2 p-3">
+              <div className="mb-2 flex items-center justify-between text-xs text-lunar-text-muted">
+                <span>{t.timeline.selectedInstant}</span>
+                <span className="font-mono text-lunar-text-strong">{chartData[clampedCursor]?.label}</span>
               </div>
-              <input type="range" min={0} max={chartData.length - 1} value={clampedCursor} onChange={(e) => setCursor(Number(e.target.value))} className="w-full" />
+              <input type="range" min={0} max={chartData.length - 1} value={clampedCursor} onChange={(e) => setCursor(Number(e.target.value))} className="w-full accent-[var(--lunar-accent)]" />
               <div className="mt-3 grid gap-2 sm:grid-cols-3">
                 {analysis.map((a) => {
                   const p = a.points[clampedCursor];
                   if (!p) return null;
                   return (
-                    <div key={a.locationId} className="rounded border border-[#2a3a4a] p-2 text-xs">
-                      <div className="mb-1 flex items-center gap-2 font-medium" style={{ color: a.color || "#F1F0EB" }}><span className="h-2 w-2 rounded-full" style={{ background: a.color || "#85847F" }} />{a.name || a.locationId}</div>
-                      <div className="text-[#D5D2C9]">Elevação solar: <span className="font-mono">{p.solarElevationDeg != null ? `${p.solarElevationDeg.toFixed(1)}°` : "N/D"}</span></div>
-                      <div className="text-[#D5D2C9]">Terra visível: <span className="font-mono">{p.earthVisibility != null ? `${(p.earthVisibility <= 1 ? p.earthVisibility * 100 : p.earthVisibility).toFixed(0)}%` : "N/D"}</span></div>
-                      <div className="text-[#D5D2C9]">Comunicação: <span className="font-mono">{p.commWindow == null ? "N/D" : p.commWindow ? "Sim" : "Não"}</span></div>
-                      <div className="mt-1 text-[10px] text-[#6b7a8a]">Fonte: {p.source} · Qualidade: {p.quality != null ? `${Math.round(p.quality * 100)}%` : "N/D"}</div>
+                    <div key={a.locationId} className="rounded border border-lunar-border-strong p-2 text-xs">
+                      <div className="mb-1 flex items-center gap-2 font-medium" style={{ color: a.color || "var(--lunar-text-strong)" }}><span className="h-2 w-2 rounded-full" style={{ background: a.color || "#85847F" }} />{a.name || a.locationId}</div>
+                      <div className="text-lunar-text">{t.timeline.solarElevation}: <span className="font-mono">{p.solarElevationDeg != null ? `${p.solarElevationDeg.toFixed(1)}°` : "N/D"}</span></div>
+                      <div className="text-lunar-text">{t.timeline.earthVisible}: <span className="font-mono">{p.earthVisibility != null ? `${(p.earthVisibility <= 1 ? p.earthVisibility * 100 : p.earthVisibility).toFixed(0)}%` : "N/D"}</span></div>
+                      <div className="text-lunar-text">{t.timeline.communication}: <span className="font-mono">{p.commWindow == null ? "N/D" : p.commWindow ? t.common.yes : t.common.no}</span></div>
+                      <div className="mt-1 text-[10px] text-lunar-text-faint">{t.timeline.source}: {t.source[p.source as keyof typeof t.source] || p.source} · {t.timeline.quality}: {p.quality != null ? `${Math.round(p.quality * 100)}%` : "N/D"}</div>
                     </div>
                   );
                 })}
@@ -147,14 +141,12 @@ export function Timeline({ sites, analysis, loading, error, start, end, step, on
             </div>
           )}
 
-          <div className="text-[11px] text-[#6b7a8a]">
-            Nota: gráficos mostram apenas dados devolvidos pela análise. Séries marcadas como mock/sintéticas não representam medições científicas validadas.
-          </div>
+          <div className="text-[11px] text-lunar-text-faint">{t.timeline.note}</div>
         </div>
       )}
 
       {!loading && analysis && analysis.length > 0 && chartData.length === 0 && (
-        <div className="rounded-lg border border-dashed border-[#2a3a4a] p-4 text-sm text-[#8FAFC7]">A análise não devolveu pontos para o intervalo selecionado.</div>
+        <div className="rounded-lg border border-dashed border-lunar-border-strong p-4 text-sm text-lunar-text-muted">{t.timeline.noPoints}</div>
       )}
     </section>
   );

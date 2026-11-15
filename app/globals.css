@@ -45,75 +45,137 @@
     --radius-2xl: calc(var(--radius) * 1.8);
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
+    /* LUNARIS semantic tokens */
+    --color-lunar-bg: var(--lunar-bg);
+    --color-lunar-surface: var(--lunar-surface);
+    --color-lunar-surface-2: var(--lunar-surface-2);
+    --color-lunar-surface-3: var(--lunar-surface-3);
+    --color-lunar-border: var(--lunar-border);
+    --color-lunar-border-strong: var(--lunar-border-strong);
+    --color-lunar-text: var(--lunar-text);
+    --color-lunar-text-strong: var(--lunar-text-strong);
+    --color-lunar-text-muted: var(--lunar-text-muted);
+    --color-lunar-text-faint: var(--lunar-text-faint);
+    --color-lunar-accent: var(--lunar-accent);
+    --color-lunar-signal: var(--lunar-signal);
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    --background: #f4f3ee;
+    --foreground: #101820;
+    --card: #ffffff;
+    --card-foreground: #101820;
+    --popover: #ffffff;
+    --popover-foreground: #101820;
+    --primary: #172b40;
+    --primary-foreground: #f1f0eb;
+    --secondary: #e7e4db;
+    --secondary-foreground: #101820;
+    --muted: #eceae3;
+    --muted-foreground: #5f6770;
+    --accent: #e3e9f0;
+    --accent-foreground: #101820;
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --border: #d8d4ca;
+    --input: #d8d4ca;
+    --ring: #8fafc7;
+    --chart-1: #172b40;
+    --chart-2: #8fafc7;
+    --chart-3: #e89a55;
+    --chart-4: #85847f;
+    --chart-5: #4f6d86;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: #fbfaf7;
+    --sidebar-foreground: #101820;
+    --sidebar-primary: #172b40;
+    --sidebar-primary-foreground: #f1f0eb;
+    --sidebar-accent: #e7edf4;
+    --sidebar-accent-foreground: #101820;
+    --sidebar-border: #d8d4ca;
+    --sidebar-ring: #8fafc7;
+
+    /* LUNARIS identity + light surfaces */
+    --lunar-white: #F1F0EB;
+    --moon-dust: #D5D2C9;
+    --regolith: #85847F;
+    --deep-space: #101820;
+    --midnight: #172B40;
+    --lunar-blue: #5f86a6;
+    --signal: #cf7a2c;
+
+    --lunar-bg: #eef0eb;
+    --lunar-surface: #fbfaf7;
+    --lunar-surface-2: #ffffff;
+    --lunar-surface-3: #e8edf3;
+    --lunar-border: #d8d4ca;
+    --lunar-border-strong: #c5c0b4;
+    --lunar-text: #2b3138;
+    --lunar-text-strong: #101820;
+    --lunar-text-muted: #5f6770;
+    --lunar-text-faint: #7c828a;
+    --lunar-accent: #3f6686;
+    --lunar-signal: #cf7a2c;
+    --scrollbar-track: #e4e1d8;
+    --scrollbar-thumb: #c3beb1;
+    --scrollbar-thumb-hover: #aaa494;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: #0a1018;
+    --foreground: #d5d2c9;
+    --card: #101820;
+    --card-foreground: #d5d2c9;
+    --popover: #101820;
+    --popover-foreground: #d5d2c9;
+    --primary: #172b40;
+    --primary-foreground: #f1f0eb;
+    --secondary: #172b40;
+    --secondary-foreground: #f1f0eb;
+    --muted: #172b40;
+    --muted-foreground: #8fafc7;
+    --accent: #172b40;
+    --accent-foreground: #f1f0eb;
     --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --border: #1e2a37;
+    --input: #2a3a4a;
+    --ring: #8fafc7;
+    --chart-1: #8fafc7;
+    --chart-2: #e89a55;
+    --chart-3: #d5d2c9;
+    --chart-4: #85847f;
+    --chart-5: #f1f0eb;
+    --sidebar: #101820;
+    --sidebar-foreground: #d5d2c9;
+    --sidebar-primary: #172b40;
+    --sidebar-primary-foreground: #f1f0eb;
+    --sidebar-accent: #172b40;
+    --sidebar-accent-foreground: #f1f0eb;
+    --sidebar-border: #1e2a37;
+    --sidebar-ring: #8fafc7;
+
+    --lunar-white: #F1F0EB;
+    --moon-dust: #D5D2C9;
+    --regolith: #85847F;
+    --deep-space: #101820;
+    --midnight: #172B40;
+    --lunar-blue: #8FAFC7;
+    --signal: #E89A55;
+
+    --lunar-bg: #0a1018;
+    --lunar-surface: #101820;
+    --lunar-surface-2: #0d1824;
+    --lunar-surface-3: #172b40;
+    --lunar-border: #1e2a37;
+    --lunar-border-strong: #2a3a4a;
+    --lunar-text: #d5d2c9;
+    --lunar-text-strong: #f1f0eb;
+    --lunar-text-muted: #8fafc7;
+    --lunar-text-faint: #6b7a8a;
+    --lunar-accent: #8fafc7;
+    --lunar-signal: #e89a55;
+    --scrollbar-track: #0d1824;
+    --scrollbar-thumb: #2a3a4a;
+    --scrollbar-thumb-hover: #3a4f63;
 }
 
 @layer base {
@@ -124,24 +186,13 @@
     @apply font-sans;
   }
   body {
-    background: #0a1018;
-    color: #d5d2c9;
+    @apply bg-lunar-bg text-lunar-text;
+    transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
   }
-}
-
-/* LUNARIS base surfaces */
-:root {
-  --lunar-white: #F1F0EB;
-  --moon-dust: #D5D2C9;
-  --regolith: #85847F;
-  --deep-space: #101820;
-  --midnight: #172B40;
-  --lunar-blue: #8FAFC7;
-  --signal: #E89A55;
 }
 
 /* scrollbars (subtle) */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-track { background: #0d1824; }
-*::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 999px; }
-*::-webkit-scrollbar-thumb:hover { background: #3a4f63; }
+*::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+*::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }

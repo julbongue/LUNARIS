@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { I18nProvider } from "@/lib/i18n/provider";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
@@ -10,7 +11,7 @@ const fontMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
 
 export const metadata: Metadata = {
   title: "LUNARIS — Lunar Explorer",
-  description: "Plataforma de exploração e análise lunar com globo 3D e comparação científica de locais.",
+  description: "Lunar exploration and analysis platform with 3D globe and scientific site comparison.",
 };
 
 export default function RootLayout({
@@ -20,13 +21,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="pt-PT"
+      lang="en"
       suppressHydrationWarning
       className={cn("antialiased", fontMono.variable, "font-sans", geist.variable)}
     >
-      <body className="min-h-screen bg-[#0a1018] text-[#D5D2C9]">
-        <ThemeProvider defaultTheme="dark" enableSystem={false}>
-          {children}
+      <body className="min-h-screen bg-lunar-bg text-lunar-text">
+        <ThemeProvider>
+          <I18nProvider>{children}</I18nProvider>
         </ThemeProvider>
       </body>
     </html>
