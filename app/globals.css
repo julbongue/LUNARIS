@@ -119,11 +119,29 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
+  }
   html {
     @apply font-sans;
-    }
+  }
+  body {
+    background: #0a1018;
+    color: #d5d2c9;
+  }
 }
+
+/* LUNARIS base surfaces */
+:root {
+  --lunar-white: #F1F0EB;
+  --moon-dust: #D5D2C9;
+  --regolith: #85847F;
+  --deep-space: #101820;
+  --midnight: #172B40;
+  --lunar-blue: #8FAFC7;
+  --signal: #E89A55;
+}
+
+/* scrollbars (subtle) */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: #0d1824; }
+*::-webkit-scrollbar-thumb { background: #2a3a4a; border-radius: 999px; }
+*::-webkit-scrollbar-thumb:hover { background: #3a4f63; }
